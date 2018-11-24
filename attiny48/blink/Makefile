@@ -5,6 +5,7 @@ CPUFREQ=8000000UL
 
 CFLAGS=-g -Wall -mcall-prologues -mmcu=$(MCU) -Os -DF_CPU=$(CPUFREQ)
 LDFLAGS=-Wl,-gc-sections -Wl,-relax
+# clock not divided
 FUSEOPTS=-U lfuse:w:0xee:m -U hfuse:w:0xdf:m -U efuse:w:0xff:m
 
 PROGPORT=/dev/ttyACM0
