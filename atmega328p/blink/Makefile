@@ -1,11 +1,11 @@
 CC=avr-gcc
-MCU=attiny48
+MCU=atmega328p
 TARGET=blink
 CPUFREQ=8000000UL
 
 CFLAGS=-g -Wall -mcall-prologues -mmcu=$(MCU) -Os -DF_CPU=$(CPUFREQ)
 LDFLAGS=-Wl,-gc-sections -Wl,-relax
-FUSEOPTS=-U lfuse:w:0xee:m -U hfuse:w:0xdf:m -U efuse:w:0xff:m
+FUSEOPTS=-U lfuse:w:0x62:m -U hfuse:w:0xd9:m -U efuse:w:0xff:m
 
 PROGPORT=/dev/ttyACM0
 
