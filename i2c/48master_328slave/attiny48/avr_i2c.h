@@ -1,10 +1,10 @@
-#ifndef __AVR_TWI_H__
-#define __AVR_TWI_H__
+#ifndef __AVR_I2C_H__
+#define __AVR_I2C_H__
 
 #define I2C_SCL_FREQ 100000
 #define I2C_TWBR ((F_CPU / (2UL * I2C_SCL_FREQ)) - 8UL)
 
-enum twi_state_s
+enum i2c_state_s
 {
 /* TWI master general staus codes */
 
@@ -112,4 +112,4 @@ enum twi_state_s
 	I2C_BUS_ERROR			= 0x00,
 };
 
-#endif /* __AVR_TWI_H__ */
+#endif /* __AVR_I2C_H__ */
