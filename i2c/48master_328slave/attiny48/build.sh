@@ -10,6 +10,7 @@ EFU="0xff"
 
 SOURCES="
 	i2c_led.c
+	avr_master.c
 	"
 
 OBJDIR="obj"

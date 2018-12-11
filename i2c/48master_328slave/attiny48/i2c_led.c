@@ -3,10 +3,13 @@
 
 #include <avr/io.h>
 #include <avr/cpufunc.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
 
 #include "avr_i2c.h"
 
+extern void
+I2C_Master_Init (void);
 
 int
 main (void)
@@ -17,9 +20,11 @@ main (void)
 	DDRB = _BV(PB0); /* output */
 	PORTB = 0x0;
 
-	_delay_ms (50);
+	I2C_Master_Init ();
 
-	//TODO: TWI init
+	sei ();
+
+	_delay_ms (50);
 
 	while (1)
 	{
