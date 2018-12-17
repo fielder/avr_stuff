@@ -10,7 +10,7 @@ HFU="0xd9"
 EFU="0xff"
 
 SOURCES="slave.c
-	TWI_multi_slave.c"
+	avr_slave.c"
 
 OBJDIR="obj"
 CC="avr-gcc"

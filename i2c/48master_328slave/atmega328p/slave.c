@@ -14,7 +14,7 @@
 
 #include <util/delay.h>
 
-#include "avr-i2c-slave.h"
+#include "avr_slave.h"
 
 #define I2C_FREQ 100000
 
@@ -39,7 +39,7 @@ main (void)
 	_delay_ms (50);
 
 #define twbr ((F_CPU / (2UL * I2C_FREQ)) - 8UL)
-	i2c_slave_init (I2C_SLAVE_ADDR, twbr);
+	I2C_Slave_Init (I2C_SLAVE_ADDR, twbr);
 
 	while (1)
 	{
