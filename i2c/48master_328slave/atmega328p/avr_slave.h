@@ -2,7 +2,6 @@
 #define __AVR_SLAVE_H__
 
 #include <stdint.h>
-#include <stdbool.h>
 
 /* master wrote to slave; (bytes, count) */
 extern void (*i2c_rx_callback) (uint8_t *, uint8_t);

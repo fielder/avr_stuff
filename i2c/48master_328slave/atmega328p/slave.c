@@ -7,11 +7,10 @@
 #endif
 
 #include <stdint.h>
-#include <stdbool.h>
 
 #include <avr/io.h>
 #include <avr/cpufunc.h>
-
+#include <util/atomic.h>
 #include <util/delay.h>
 
 #include "avr_slave.h"
@@ -23,8 +22,14 @@
  * - 1 pin as an LED output
  */
 
-static bool button_pressed = false;
-static bool led_on = false;
+static uint8_t button_pressed = 0;
+static uint8_t led_on = 0;
+
+
+static void
+Data_RX (uint8_t *bytes, uint8_t len)
+{
+}
 
 
 int
@@ -36,10 +41,15 @@ main (void)
 	DDRD = (0 << PD7); /* input */
 	PORTD = 0xff; /* enable all pull-ups on port D */
 
-	_delay_ms (50);
+	i2c_rx_callback = Data_RX;
+
+	i2c_tx_buf = &button_pressed;
+	i2c_tx_buf_len = 1;
 
 #define twbr ((F_CPU / (2UL * I2C_FREQ)) - 8UL)
 	I2C_Slave_Init (I2C_SLAVE_ADDR, twbr);
+
+	_delay_ms (50);
 
 	while (1)
 	{
@@ -48,9 +58,9 @@ main (void)
 		if (1)
 		{
 			if (button_pressed)
-				led_on = true;
+				led_on = 1;
 			else
-				led_on = false;
+				led_on = 0;
 		}
 
 		if (led_on)
