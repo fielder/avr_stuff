@@ -1,16 +1,16 @@
 #include <stdint.h>
-#include <stdbool.h>
 
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <util/atomic.h>
+#include <util/twi.h>
 
 #include "avr_i2c.h"
 #include "avr_master.h"
 
 uint8_t i2c_status;
 
-static uint8_t i2c_buf[16];
+static uint8_t i2c_buf[32];
 static uint8_t i2c_buf_len;
 static uint8_t i2c_buf_idx;
 #define I2C_BUF_SIZE (sizeof(i2c_buf) / sizeof(i2c_buf[0]))
@@ -21,7 +21,7 @@ I2C_Master_Init (void)
 {
 	i2c_buf_len = 0;
 	i2c_buf_idx = 0;
-	i2c_status = 0x0;
+	i2c_status = I2C_STATUS_NONE;
 
 	TWSR = 0x0; /* TWPS bits 0x0 gives a prescalar of 1 */
 	TWBR = I2C_TWBR;
@@ -35,7 +35,7 @@ I2C_Master_Disable (void)
 {
 	i2c_buf_len = 0;
 	i2c_buf_idx = 0;
-	i2c_status = 0x0;
+	i2c_status = I2C_STATUS_NONE;
 
 	TWDR = 0xff;
 	TWCR = 0x0;
@@ -45,6 +45,7 @@ I2C_Master_Disable (void)
 void
 I2C_Master_Write (uint8_t slaveaddr, uint8_t *data, uint8_t cnt)
 {
+	/* note buf needs to hold slaveaddr+rw byte */
 	if ((cnt + 1) > I2C_BUF_SIZE)
 	{
 		i2c_status = I2C_STATUS_ERROR;
@@ -58,7 +59,7 @@ I2C_Master_Write (uint8_t slaveaddr, uint8_t *data, uint8_t cnt)
 				i2c_buf[i + 1] = data[i];
 			i2c_buf_len = cnt + 1;
 			i2c_buf_idx = 0;
-			i2c_status = 0x0;
+			i2c_status = I2C_STATUS_NONE;
 		}
 		TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWSTA);
 	}
@@ -76,6 +77,7 @@ ISR(TWI_vect)
 		case I2C_MTX_DATA_ACK: /* slave received data byte, ACK received */
 			if (i2c_buf_idx < i2c_buf_len)
 			{
+				/* xmit next byte */
 				TWDR = i2c_buf[i2c_buf_idx++];
 				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
 			}
@@ -95,12 +97,11 @@ ISR(TWI_vect)
 				/* ACK */
 				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
 			else
-				/* master received final byte; NACK */
 				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
 			break;
 
 		case I2C_MRX_DATA_NACK:
-			/* data received from slave and NACK xmitted */
+			/* final byte received from slave */
 			i2c_buf[i2c_buf_idx] = TWDR;
 			i2c_status |= I2C_STATUS_READ_COMPLETE;
 			TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);
@@ -112,8 +113,8 @@ ISR(TWI_vect)
 			break;
 
 		case I2C_MTX_ADR_NACK:
-		case I2C_MRX_ADR_NACK:
 		case I2C_MTX_DATA_NACK:
+		case I2C_MRX_ADR_NACK:
 			i2c_status |= I2C_STATUS_SLAVE_NACKED;
 			/* send stop to clear things out since slave NACK'd */
 			TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);

@@ -1,6 +1,4 @@
 #include <stdint.h>
-#include <stdbool.h>
-
 #include <avr/io.h>
 #include <avr/cpufunc.h>
 #include <avr/interrupt.h>
@@ -14,8 +12,8 @@ I2C_Master_Init (void);
 int
 main (void)
 {
-	bool button_pressed = false;
-	bool led_on = false;
+	uint8_t button_pressed = 0;
+	uint8_t led_on = 0;
 
 	DDRB = _BV(PB0); /* output */
 	PORTB = 0x0;
@@ -31,9 +29,9 @@ main (void)
 		//TODO: read button status from slave over TWI
 
 		if (button_pressed)
-			led_on = true;
+			led_on = 1;
 		else
-			led_on = false;
+			led_on = 0;
 
 		if (led_on)
 			PORTB |= _BV(PB0);

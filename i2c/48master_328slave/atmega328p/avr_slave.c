@@ -44,7 +44,7 @@ ISR(TWI_vect)
 {
 	static uint8_t tx_idx = 0;
 
-	static uint8_t rx_buf[16];
+	static uint8_t rx_buf[32];
 #define RX_BUF_SZ (sizeof(rx_buf) / sizeof(rx_buf[0]))
 	static uint8_t rx_idx = 0;
 
