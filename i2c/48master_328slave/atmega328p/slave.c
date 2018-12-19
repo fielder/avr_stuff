@@ -29,6 +29,8 @@ static uint8_t led_on = 0;
 static void
 Data_RX (uint8_t *bytes, uint8_t len)
 {
+	if (len > 0)
+		led_on = bytes[0];
 }
 
 
@@ -55,17 +57,19 @@ main (void)
 	{
 		button_pressed = (PIND & _BV(PD7)) == 0x0;
 
-		if (1)
-		{
-			if (button_pressed)
-				led_on = 1;
-			else
-				led_on = 0;
-		}
-
 		if (led_on)
 			PORTB |= _BV(PB0);
 		else
 			PORTB &= ~_BV(PB0);
 	}
 }
+
+/*
+		if (0)
+		{
+			if (button_pressed)
+				led_on = 1;
+			else
+				led_on = 0;
+		}
+*/

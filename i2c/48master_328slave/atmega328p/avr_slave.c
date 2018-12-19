@@ -24,9 +24,8 @@ I2C_Slave_Init (uint8_t addr, uint8_t twbr)
 	{
 		i2c_busy = 0;
 		TWBR = twbr;
-		TWAR = (addr << 1) & 0xfe;
-		TWDR = 0xff;
-		TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWEA) | _BV(TWINT);
+		TWAR = addr << 1;
+		TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
 	}
 }
 
@@ -34,8 +33,7 @@ I2C_Slave_Init (uint8_t addr, uint8_t twbr)
 void
 I2C_Slave_Disable (void)
 {
-	TWCR = 0x0;
-	TWDR = 0xff;
+	TWCR = 0;
 	i2c_busy = 0;
 }
 
@@ -63,7 +61,7 @@ ISR(TWI_vect)
 			break;
 
 		case I2C_STX_DATA_NACK:
-			/* consider it finished */
+			/* NACK from master; consider the xmit finished */
 			i2c_busy = 0;
 			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
 			break;
@@ -102,7 +100,7 @@ ISR(TWI_vect)
 		default:
 			/* unknown status; reset */
 			i2c_busy = 0;
-			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWEA) | _BV(TWINT);
+			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
 			break;
 	}
 }
