@@ -5,9 +5,8 @@
 #include <util/delay.h>
 
 #include "avr_i2c.h"
+#include "avr_master.h"
 
-extern void
-I2C_Master_Init (void);
 
 int
 main (void)
@@ -18,6 +17,9 @@ main (void)
 	DDRB = _BV(PB0); /* output */
 	PORTB = 0x0;
 
+	DDRD = (0 << PD7); /* input */
+	PORTD = 0xff; /* enable all pull-ups on port D */
+
 	I2C_Master_Init ();
 
 	sei ();
@@ -26,12 +28,14 @@ main (void)
 
 	while (1)
 	{
-		//TODO: read button status from slave over TWI
+		//I2C_Master_Write (100, (uint8_t *)"abcd", 4);
+		//_delay_ms (5);
 
-		if (button_pressed)
-			led_on = 1;
-		else
-			led_on = 0;
+		button_pressed = (PIND & _BV(PD7)) == 0x0;
+		//TODO: write button_pressed to slave
+
+		//TODO: read button state from slave;
+		//led_on = ??
 
 		if (led_on)
 			PORTB |= _BV(PB0);

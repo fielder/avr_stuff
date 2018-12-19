@@ -23,7 +23,7 @@ I2C_Master_Init (void)
 	i2c_buf_idx = 0;
 	i2c_status = I2C_STATUS_NONE;
 
-	TWSR = 0x0; /* TWPS bits 0x0 gives a prescalar of 1 */
+	TWSR = 0; /* TWPS bits 0x0 gives a prescalar of 1 */
 	TWBR = I2C_TWBR;
 	TWDR = 0xff;
 	TWCR = _BV(TWEN); /* enable and release TWI pins */
@@ -38,7 +38,7 @@ I2C_Master_Disable (void)
 	i2c_status = I2C_STATUS_NONE;
 
 	TWDR = 0xff;
-	TWCR = 0x0;
+	TWCR = 0;
 }
 
 
@@ -48,7 +48,7 @@ I2C_Master_Write (uint8_t slaveaddr, uint8_t *data, uint8_t cnt)
 	/* note buf needs to hold slaveaddr+rw byte */
 	if ((cnt + 1) > I2C_BUF_SIZE)
 	{
-		i2c_status = I2C_STATUS_ERROR;
+		i2c_status = I2C_STATUS_BUFFER_ERROR;
 	}
 	else
 	{
@@ -63,6 +63,12 @@ I2C_Master_Write (uint8_t slaveaddr, uint8_t *data, uint8_t cnt)
 		}
 		TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWSTA);
 	}
+}
+
+
+uint8_t
+I2C_Master_Read (uint8_t slaveaddr, uint8_t *dest, uint8_t bufsz)
+{
 }
 
 
@@ -84,7 +90,7 @@ ISR(TWI_vect)
 			else
 			{
 				/* last byte xmitted; write complete */
-				i2c_status |= I2C_STATUS_WRITE_COMPLETE;
+				i2c_status = I2C_STATUS_WRITE_COMPLETE;
 				TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);
 			}
 			break;
@@ -97,13 +103,14 @@ ISR(TWI_vect)
 				/* ACK */
 				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
 			else
+				/* NACK */
 				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
 			break;
 
 		case I2C_MRX_DATA_NACK:
 			/* final byte received from slave */
 			i2c_buf[i2c_buf_idx] = TWDR;
-			i2c_status |= I2C_STATUS_READ_COMPLETE;
+			i2c_status = I2C_STATUS_READ_COMPLETE;
 			TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);
 			break;
 
@@ -115,7 +122,7 @@ ISR(TWI_vect)
 		case I2C_MTX_ADR_NACK:
 		case I2C_MTX_DATA_NACK:
 		case I2C_MRX_ADR_NACK:
-			i2c_status |= I2C_STATUS_SLAVE_NACKED;
+			i2c_status = I2C_STATUS_SLAVE_NACKED;
 			/* send stop to clear things out since slave NACK'd */
 			TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);
 			break;
@@ -124,8 +131,8 @@ ISR(TWI_vect)
 		case I2C_NO_STATE:
 		default:
 			/* reset TWI interface */
-			i2c_status = 0x80;
-			I2C_Master_Init ();
+			i2c_status = I2C_STATUS_BUS_ERROR;
+			TWCR = _BV(TWEN);
 			break;
 	}
 }
