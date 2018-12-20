@@ -1,11 +1,3 @@
-#ifndef F_CPU
-#error "F_CPU not defined"
-#endif
-
-#ifndef I2C_SLAVE_ADDR
-#error "I2C_SLAVE_ADDR not defined"
-#endif
-
 #include <stdint.h>
 
 #include <avr/io.h>
@@ -14,8 +6,7 @@
 #include <util/delay.h>
 
 #include "avr_slave.h"
-
-#define I2C_FREQ 100000
+#include "avr_i2c.h"
 
 /*
  * - 1 pin as a button input, pulled up
@@ -48,7 +39,7 @@ main (void)
 	i2c_tx_buf = &button_pressed;
 	i2c_tx_buf_len = 1;
 
-#define twbr ((F_CPU / (2UL * I2C_FREQ)) - 8UL)
+#define twbr ((F_CPU / (2UL * I2C_SCL_FREQ)) - 8UL)
 	I2C_Slave_Init (I2C_SLAVE_ADDR, twbr);
 
 	_delay_ms (50);
@@ -63,13 +54,3 @@ main (void)
 			PORTB &= ~_BV(PB0);
 	}
 }
-
-/*
-		if (0)
-		{
-			if (button_pressed)
-				led_on = 1;
-			else
-				led_on = 0;
-		}
-*/
