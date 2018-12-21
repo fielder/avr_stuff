@@ -1,8 +1,6 @@
 #include <stdint.h>
 
 #include <avr/io.h>
-#include <avr/cpufunc.h>
-#include <util/atomic.h>
 #include <util/delay.h>
 
 #include "avr_slave.h"
@@ -14,15 +12,6 @@
  */
 
 static uint8_t button_pressed = 0;
-static uint8_t led_on = 0;
-
-
-static void
-Data_RX (uint8_t *bytes, uint8_t len)
-{
-	if (len > 0)
-		led_on = bytes[0];
-}
 
 
 int
@@ -34,13 +23,10 @@ main (void)
 	DDRD = (0 << PD7); /* input */
 	PORTD = 0xff; /* enable all pull-ups on port D */
 
-	i2c_rx_callback = Data_RX;
-
 	i2c_tx_buf = &button_pressed;
 	i2c_tx_buf_len = 1;
 
-#define twbr ((F_CPU / (2UL * I2C_SCL_FREQ)) - 8UL)
-	I2C_Slave_Init (I2C_SLAVE_ADDR, twbr);
+	I2C_Slave_Init (I2C_SLAVE_ADDR, I2C_TWBR);
 
 	_delay_ms (50);
 
@@ -48,7 +34,7 @@ main (void)
 	{
 		button_pressed = (PIND & _BV(PD7)) == 0x0;
 
-		if (led_on)
+		if (button_pressed)
 			PORTB |= _BV(PB0);
 		else
 			PORTB &= ~_BV(PB0);

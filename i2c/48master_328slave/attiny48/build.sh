@@ -9,7 +9,7 @@ HFU="0xdf"
 EFU="0xff"
 
 SOURCES="
-	i2c_led.c
+	master.c
 	avr_master.c
 	"
 
