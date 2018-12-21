@@ -9,8 +9,7 @@ LFU="0xe2"
 HFU="0xd9"
 EFU="0xff"
 
-SOURCES="slave.c
-	avr_slave.c"
+SOURCES="slave.c"
 
 OBJDIR="obj"
 CC="avr-gcc"
