@@ -9,20 +9,18 @@
 int
 main (void)
 {
-	DDRB = (1 << PB0);
-	_NOP();
-	PORTB = 0x0;
-	_NOP();
+	DDRB = _BV(PB0); /* output */
+	PORTB = 0x0; /* disable pull-ups */
 	_delay_ms (50);
 	while (1)
 	{
 #define DEL 100
 		/* turn all on, one-by-one */
-		PORTB |= (1 << PB0);
+		PORTB |= _BV(PB0);
 		_delay_ms (DEL);
 
 		/* turn all off, one-by-one */
-		PORTB &= ~(1 << PB0);
+		PORTB &= ~_BV(PB0);
 		_delay_ms (DEL);
 	}
 }
