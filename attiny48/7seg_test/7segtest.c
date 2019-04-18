@@ -92,33 +92,38 @@ uint8_t led_map_D_hi[16] =
 };
 
 
+static void
+SetLEDs (uint8_t lo, uint8_t hi)
+{
+	uint8_t x;
+
+	/* low nibble is mostly PORTB bits */
+	x = led_map_B_lo[lo];
+	/* but high nibble has 2 PORTB bits */
+	x |= led_map_B_hi[hi];
+	PORTB = x;
+
+	/* high nibble is mostly PORTD bits */
+	x = led_map_D_hi[hi];
+	/* but low nibble has 2 PORTD bits */
+	x |= led_map_D_lo[lo];
+	PORTD = x;
+}
+
+
 int
 main (void)
 {
-	DDRB = 0xff;
-	DDRD = 0xff;
+	DDRB = 0xff; /* all pins on port as output */
+	DDRD = 0xff; /* all pins on port as output */
 
 	_delay_ms (50);
 
 	uint8_t val = 0;
 	while (1)
 	{
-		uint8_t x;
-
-		/* low nibble is mostly PORTB bits */
-		x = led_map_B_lo[val & 0xf];
-		/* but high nibble has 2 PORTB bits */
-		x |= led_map_B_hi[(val >> 4) & 0xf];
-		PORTB = x;
-
-		/* high nibble is mostly PORTD bits */
-		x = led_map_D_hi[(val >> 4) & 0xf];
-		/* but low nibble has 2 PORTD bits */
-		x |= led_map_D_lo[val & 0xf];
-		PORTD = x;
-
+		SetLEDs (val & 0xf, (val >> 4) & 0xf);
 		val++;
-
 		for (uint8_t x = 0; x < 14; x++)
 			_delay_ms (25);
 	}
