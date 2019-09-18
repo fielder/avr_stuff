@@ -9,11 +9,9 @@
 #include "avr_master.h"
 
 uint8_t i2c_status;
-
-static uint8_t i2c_buf[32];
-static uint8_t i2c_buf_len;
-static uint8_t i2c_buf_idx;
-#define I2C_BUF_SIZE (sizeof(i2c_buf) / sizeof(i2c_buf[0]))
+uint8_t i2c_buf[32];
+uint8_t i2c_buf_len;
+uint8_t i2c_buf_idx;
 
 
 void
@@ -38,10 +36,11 @@ I2C_Master_Disable (void)
 	i2c_status = I2C_STATUS_NONE;
 
 	TWDR = 0xff;
-	TWCR = 0;
+	TWCR = 0x0;
 }
 
 
+#if 0
 void
 I2C_Master_Write (uint8_t slaveaddr, uint8_t *data, uint8_t cnt)
 {
@@ -64,11 +63,16 @@ I2C_Master_Write (uint8_t slaveaddr, uint8_t *data, uint8_t cnt)
 		TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWSTA);
 	}
 }
+#endif
 
 
-uint8_t
+void
 I2C_Master_Read (uint8_t slaveaddr, uint8_t *dest, uint8_t bufsz)
 {
+	// 1st byte should be SLA+R
+	i2c_buf[0] = (slaveaddr << 1) | 0x1;
+	// set i2c_buf_len to what master wants to read
+	//...
 }
 
 
@@ -76,63 +80,49 @@ ISR(TWI_vect)
 {
 	switch (TWSR & 0xfc)
 	{
-		case I2C_START: /* START has been xmitted */
-		case I2C_REP_START: /* repeated START has been xmitted */
+		case I2C_START:
+		case I2C_REP_START:
+			i2c_status = I2C_STATUS_NONE;
+			TWDR = i2c_buf[0];
+			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
+			break;
+
+//		I2C_ARB_LOST:
+//			shouldn't happen w/ single-master setup
+//			break;
+
+		case I2C_MRX_ADR_ACK:
+			/* slave ACK'ed addressing, master prepares to receive data */
 			i2c_buf_idx = 0;
-		case I2C_MTX_ADR_ACK: /* slave received addr+rw byte, ACK received */
-		case I2C_MTX_DATA_ACK: /* slave received data byte, ACK received */
-			if (i2c_buf_idx < i2c_buf_len)
-			{
-				/* xmit next byte */
-				TWDR = i2c_buf[i2c_buf_idx++];
-				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
-			}
-			else
-			{
-				/* last byte xmitted; write complete */
-				i2c_status = I2C_STATUS_WRITE_COMPLETE;
-				TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);
-			}
+			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
+			break;
+
+		case I2C_MRX_ADR_NACK:
+			/* slave didn't ACK the SLA+RW */
+			i2c_status = I2C_STATUS_SLAVE_NACKED;
+			TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);
 			break;
 
 		case I2C_MRX_DATA_ACK:
-			/* data byte received from slave and ACK xmitted from master */
 			i2c_buf[i2c_buf_idx++] = TWDR;
-		case I2C_MRX_ADR_ACK:
 			if (i2c_buf_idx < (i2c_buf_len - 1))
-				/* ACK */
+				/* ACK to slave */
 				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
 			else
-				/* NACK */
+				/* NACK to slave */
 				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
 			break;
 
 		case I2C_MRX_DATA_NACK:
 			/* final byte received from slave */
-			i2c_buf[i2c_buf_idx] = TWDR;
+			i2c_buf[i2c_buf_idx++] = TWDR;
 			i2c_status = I2C_STATUS_READ_COMPLETE;
 			TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);
 			break;
 
-		case I2C_ARB_LOST:
-			/* initiate a (RE)START condition */
-			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWSTA);
-			break;
-
-		case I2C_MTX_ADR_NACK:
-		case I2C_MTX_DATA_NACK:
-		case I2C_MRX_ADR_NACK:
-			i2c_status = I2C_STATUS_SLAVE_NACKED;
-			/* send stop to clear things out since slave NACK'd */
-			TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);
-			break;
-
-		case I2C_BUS_ERROR:
-		case I2C_NO_STATE:
 		default:
-			/* reset TWI interface */
 			i2c_status = I2C_STATUS_BUS_ERROR;
-			TWCR = _BV(TWEN);
+			TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);
 			break;
 	}
 }

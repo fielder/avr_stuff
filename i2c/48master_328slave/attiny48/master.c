@@ -14,15 +14,16 @@ main (void)
 	uint8_t button_pressed = 0;
 	uint8_t led_on = 0;
 
-	DDRB = _BV(PB0); /* output */
+	DDRB = 0xff; /* all outputs */
 	PORTB = 0x0;
 
-	DDRD = (0 << PD7); /* input */
-	PORTD = 0xff; /* enable all pull-ups on port D */
+	DDRD = 0xff; /* all outputs */
+	PORTD = 0x0;
+
+	DDRD &= ~_BV(PD7); /* make pin an input */
+	PORTD |= _BV(PD7); /* enable pull-up */
 
 	I2C_Master_Init ();
-
-	sei ();
 
 	_delay_ms (50);
 

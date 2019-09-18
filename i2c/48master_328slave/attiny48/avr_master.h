@@ -4,6 +4,10 @@
 #include <stdint.h>
 
 extern uint8_t i2c_status;
+extern uint8_t i2c_buf[32];
+extern uint8_t i2c_buf_len;
+extern uint8_t i2c_buf_idx;
+#define I2C_BUF_SIZE (sizeof(i2c_buf) / sizeof(i2c_buf[0]))
 
 #define I2C_STATUS_NONE			0
 #define I2C_STATUS_WRITE_COMPLETE	(1 << 0)

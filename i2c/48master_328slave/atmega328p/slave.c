@@ -5,6 +5,7 @@
 
 #include <util/delay.h>
 #include <util/twi.h>
+#include <util/atomic.h>
 
 #include "avr_i2c.h"
 
@@ -29,37 +30,35 @@ ISR(TWI_vect)
 {
 	static uint8_t tx_idx = 0;
 
-	switch (TWSR)
+	switch (TWSR & 0xfc)
 	{
 		case I2C_STX_ADR_ACK:
 			tx_idx = 0;
+			i2c_busy = 1;
 		case I2C_STX_DATA_ACK:
 			if (tx_idx < i2c_tx_buf_len)
+			{
 				TWDR = i2c_tx_buf[tx_idx++];
+				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
+			}
 			else
+			{
 				TWDR = 0xff;
-			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
-			i2c_busy = 1;
+				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
+			}
 			break;
 
 		case I2C_STX_DATA_NACK:
-			/* end of transmission */
-			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
-			i2c_busy = 0;
-			break;
-
-		case I2C_SRX_ADR_DATA_NACK:
-		case I2C_SRX_GEN_DATA_NACK:
 		case I2C_STX_DATA_ACK_LAST_BYTE:
-		case I2C_BUS_ERROR:
-			/* release SCL+SDA pins */
-			TWCR = _BV(TWSTO) | _BV(TWINT);
+			/* end of transmission */
+			i2c_busy = 0;
+			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
 			break;
 
 		default:
 			/* unknown status; reset */
-			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
 			i2c_busy = 0;
+			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
 			break;
 	}
 }
@@ -69,11 +68,14 @@ ISR(TWI_vect)
 int
 main (void)
 {
-	DDRB = _BV(PB0); /* output */
+	DDRB = 0xff; /* all outputs */
 	PORTB = 0x0;
 
-	DDRD = (0 << PD7); /* input */
-	PORTD = 0xff; /* enable all pull-ups on port D */
+	DDRD = 0xff; /* all outputs */
+	PORTD = 0x0;
+
+	DDRD &= ~_BV(PD7); /* make pin an input */
+	PORTD |= _BV(PD7); /* enable pull-up */
 
 	I2C_Slave_Init ();
 
@@ -81,10 +83,21 @@ main (void)
 
 	while (1)
 	{
+		if (i2c_busy)
+			PORTD |= _BV(PD5);
+		else
+			PORTD &= ~_BV(PD5);
+
 		uint8_t button_pressed = (PIND & _BV(PD7)) == 0x0;
 
-		i2c_tx_buf[0] = button_pressed;
-		i2c_tx_buf_len = 1;
+		ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+		{
+			if (!i2c_busy)
+			{
+				i2c_tx_buf[0] = button_pressed;
+				i2c_tx_buf_len = 1;
+			}
+		}
 
 		if (button_pressed)
 			PORTB |= _BV(PB0);
