@@ -7,7 +7,8 @@
 #include <util/twi.h>
 #include <util/atomic.h>
 
-#include "avr_i2c.h"
+#define I2C_SCL_FREQ 100000
+#define I2C_TWBR ((F_CPU / (2UL * I2C_SCL_FREQ)) - 8UL)
 
 uint8_t i2c_busy = 0;
 
@@ -30,12 +31,12 @@ ISR(TWI_vect)
 {
 	static uint8_t tx_idx = 0;
 
-	switch (TWSR & 0xfc)
+	switch (TW_STATUS)
 	{
-		case I2C_STX_ADR_ACK:
+		case TW_ST_SLA_ACK:
 			tx_idx = 0;
 			i2c_busy = 1;
-		case I2C_STX_DATA_ACK:
+		case TW_ST_DATA_ACK:
 			if (tx_idx < i2c_tx_buf_len)
 			{
 				TWDR = i2c_tx_buf[tx_idx++];
@@ -48,8 +49,8 @@ ISR(TWI_vect)
 			}
 			break;
 
-		case I2C_STX_DATA_NACK:
-		case I2C_STX_DATA_ACK_LAST_BYTE:
+		case TW_ST_DATA_NACK:
+		case TW_ST_LAST_DATA:
 			/* end of transmission */
 			i2c_busy = 0;
 			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);

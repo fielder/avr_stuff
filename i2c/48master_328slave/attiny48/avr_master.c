@@ -5,8 +5,10 @@
 #include <util/atomic.h>
 #include <util/twi.h>
 
-#include "avr_i2c.h"
 #include "avr_master.h"
+
+#define I2C_SCL_FREQ 100000
+#define I2C_TWBR ((F_CPU / (2UL * I2C_SCL_FREQ)) - 8UL)
 
 uint8_t i2c_status;
 uint8_t i2c_buf[32];
@@ -67,55 +69,58 @@ I2C_Master_Write (uint8_t slaveaddr, uint8_t *data, uint8_t cnt)
 
 
 void
-I2C_Master_Read (uint8_t slaveaddr, uint8_t *dest, uint8_t bufsz)
+I2C_Master_Read (uint8_t slaveaddr)
 {
-	// 1st byte should be SLA+R
-	i2c_buf[0] = (slaveaddr << 1) | 0x1;
-	// set i2c_buf_len to what master wants to read
-	//...
+	i2c_status = I2C_STATUS_NONE;
+	/* 1st byte should be SLA+R */
+	i2c_buf[0] = (slaveaddr << 1) | TW_READ;
+	i2c_buf_len = 4; /* master wants to read 4 bytes */
+	TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWSTA);
 }
 
 
 ISR(TWI_vect)
 {
-	switch (TWSR & 0xfc)
+	switch (TW_STATUS)
 	{
-		case I2C_START:
-		case I2C_REP_START:
-			i2c_status = I2C_STATUS_NONE;
+		case TW_START:
+		case TW_REP_START:
 			TWDR = i2c_buf[0];
 			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
 			break;
 
-//		I2C_ARB_LOST:
+//		TW_MR_ARB_LOST:
 //			shouldn't happen w/ single-master setup
 //			break;
 
-		case I2C_MRX_ADR_ACK:
+		case TW_MR_SLA_ACK:
 			/* slave ACK'ed addressing, master prepares to receive data */
 			i2c_buf_idx = 0;
 			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
 			break;
 
-		case I2C_MRX_ADR_NACK:
+		case TW_MR_SLA_NACK:
 			/* slave didn't ACK the SLA+RW */
 			i2c_status = I2C_STATUS_SLAVE_NACKED;
-			TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);
+			TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWSTO);
 			break;
 
-		case I2C_MRX_DATA_ACK:
-			i2c_buf[i2c_buf_idx++] = TWDR;
-			if (i2c_buf_idx < (i2c_buf_len - 1))
+		case TW_MR_DATA_ACK:
+			if (i2c_buf_idx < i2c_buf_len)
+			{
+				i2c_buf[i2c_buf_idx++] = TWDR;
 				/* ACK to slave */
 				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
+			}
 			else
 				/* NACK to slave */
 				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
 			break;
 
-		case I2C_MRX_DATA_NACK:
+		case TW_MR_DATA_NACK:
 			/* final byte received from slave */
-			i2c_buf[i2c_buf_idx++] = TWDR;
+			if (i2c_buf_idx < i2c_buf_len)
+				i2c_buf[i2c_buf_idx++] = TWDR;
 			i2c_status = I2C_STATUS_READ_COMPLETE;
 			TWCR = _BV(TWEN) | _BV(TWINT) | _BV(TWSTO);
 			break;

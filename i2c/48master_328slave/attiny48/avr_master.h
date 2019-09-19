@@ -25,7 +25,12 @@ I2C_Master_Init (void);
 extern void
 I2C_Master_Disable (void);
 
+#if 0
 extern void
 I2C_Master_Write (uint8_t slaveaddr, uint8_t *data, uint8_t cnt);
+#endif
+
+extern void
+I2C_Master_Read (uint8_t slaveaddr);
 
 #endif /* __AVR_MASTER_H__ */
