@@ -21,32 +21,31 @@ I2C_Slave_Init (void)
 {
 	i2c_busy = 0;
 	i2c_tx_buf_len = 0;
+	TWSR = 0; /* TWPS bits 0x0 gives a prescalar of 1 */
 	TWBR = I2C_TWBR;
 	TWAR = I2C_SLAVE_ADDR << 1;
 	TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
+	sei ();
 }
 
 
+static uint8_t tx_idx = 0;
+
 ISR(TWI_vect)
 {
-	static uint8_t tx_idx = 0;
-
 	switch (TW_STATUS)
 	{
 		case TW_ST_SLA_ACK:
+		case TW_ST_ARB_LOST_SLA_ACK:
 			tx_idx = 0;
 			i2c_busy = 1;
 		case TW_ST_DATA_ACK:
 			if (tx_idx < i2c_tx_buf_len)
-			{
 				TWDR = i2c_tx_buf[tx_idx++];
+			if (tx_idx < i2c_tx_buf_len)
 				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT) | _BV(TWEA);
-			}
 			else
-			{
-				TWDR = 0xff;
 				TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWINT);
-			}
 			break;
 
 		case TW_ST_DATA_NACK:
@@ -84,10 +83,7 @@ main (void)
 
 	while (1)
 	{
-		if (i2c_busy)
-			PORTD |= _BV(PD5);
-		else
-			PORTD &= ~_BV(PD5);
+		if (i2c_busy) PORTD |= _BV(PD5); else PORTD &= ~_BV(PD5);
 
 		uint8_t button_pressed = (PIND & _BV(PD7)) == 0x0;
 

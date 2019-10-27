@@ -13,9 +13,6 @@
 int
 main (void)
 {
-	uint8_t button_pressed = 0;
-	uint8_t led_on = 0;
-
 	DDRB = 0xff; /* all outputs */
 	PORTB = 0x0;
 
@@ -30,9 +27,19 @@ main (void)
 	_delay_ms (50);
 
 	static uint8_t reading = 0;
+	static uint8_t button_state = 0;
+	static uint8_t button_pressed = 0;
+	static uint8_t button_released = 0;
+	static uint8_t led_on = 0;
+	static uint8_t countdown = 0;
 	while (1)
 	{
-		button_pressed = (PIND & _BV(PD7)) == 0x0;
+		uint8_t b = (PIND & _BV(PD7)) == 0x0;
+		button_pressed = b && !button_state;
+		button_released = !b && button_state;
+		button_state = b;
+
+		if (reading) PORTD |= _BV(PD5); else PORTD &= ~_BV(PD5);
 
 		ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
 		{
@@ -49,15 +56,16 @@ main (void)
 				}
 				else
 				{
+					//TODO: probably some kind of error
 					reading = 0;
 				}
 			}
 			else
 			{
-				if (button_pressed)
+				if (++countdown == 0)
 				{
 					reading = 1;
-					I2C_Master_Read (100);
+					I2C_Master_BeginRead (100);
 				}
 			}
 		}
