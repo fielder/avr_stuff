@@ -1,5 +1,5 @@
 #ifndef F_CPU
-#define F_CPU 8000000UL
+#error F_CPU not defined
 #endif
 
 #include <avr/io.h>
@@ -45,19 +45,13 @@ main (void)
 
 // Pin 3 - PB4 - OC1B - Timer/Counter1 Compare Match B Output
 
-	//OCR1A = 199;
-	OCR1B = 199;
-	//OCR1C = 199;
+	//OCR1A = 199; whas dis?
+	OCR1B = 10;
+	OCR1C = 157;
 
-	// OC1B cleared on compare match; inverted disabled
-	GTCCR = (1 << PWM1B) | (0 << COM1B1) | (1 << COM1B0);
-	TCCR1 = (1 << CS13) | (0 << CS12) | (1 << CS11) | (1 << CS10);
-	//TIMSK = 0;
-
-	// Fast PWM; 0xff TOP; update OCRx at BOTTOM; TOV flag set on MAX
-	//TCCR0A = (1 << WGM01) | (1 << WGM00);
-	// clk/1024
-	//TCCR0B = (0 << WGM02) | (1 << CS02) | (0 << CS01) | (1 << CS00);
+	// OC1B cleared on compare match; inverted not connected
+	GTCCR = (1 << PWM1B) | (1 << COM1B1) | (0 << COM1B0);
+	TCCR1 = (0 << CS13) | (0 << CS12) | (1 << CS11) | (0 << CS10);
 
 	sei ();
 
@@ -70,7 +64,7 @@ main (void)
 			PORTB &= ~_BV(PB2);
 			PORTB &= ~_BV(PB3);
 			is_on = 0;
-			_delay_ms (1000);
+			_delay_ms (100);
 		}
 		else
 		{
@@ -78,7 +72,7 @@ main (void)
 			PORTB |= _BV(PB2);
 			PORTB |= _BV(PB3);
 			is_on = 1;
-			_delay_ms (1000);
+			_delay_ms (100);
 		}
 	}
 }
