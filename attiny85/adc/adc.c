@@ -4,54 +4,47 @@
 
 #include <avr/io.h>
 #include <avr/cpufunc.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
-
-// External Voltage Reference at PB0 (AREF) pin, Internal Voltage Reference turned off.
-#define ADMUX_VREF_SELECT ((0 << REFS2) | (0 << REFS1) | (1 << REFS0))
-
-// Write one to ADLAR to left adjust the result.
-// use ADCH to get the ADC value
-#define ADMUX_ADLAR_SELECT (1 << ADLAR)
-
-// ADC1 (pin PB2)
-#define ADMUX_ADC_INPUT_SELECT ((0 << MUX3) | (0 << MUX2) | (0 << MUX1) | (1 << MUX0))
 
 
 int
 main (void)
 {
-	DDRB = _BV(PB3) | _BV(PB4); /* output */
-	PORTB = 0x0; /* disable pull-ups */
+	DDRB = _BV(PB4) | _BV(PB3) | _BV(PB1); /* set outputs */
+	PORTB = 0x0;
 
-	ADMUX = ADMUX_VREF_SELECT | ADMUX_ADLAR_SELECT | ADMUX_ADC_INPUT_SELECT;
+	// disable digital input buffer on ADC input
+	DIDR0 = (1 << ADC1D);
 
-	// enable & aut-trigger the ADC
-	ADCSRA = ((1 << ADEN) | (1 << ADATE));
-	// ADC auto trigger mode: free-running mode
-	ADCSRB = ((0 << ADTS2) | (0 << ADTS1) | (0 << ADTS0));
+	ADMUX = (0 << REFS2) | (0 << REFS1) | (0 << REFS0) |
+		(0 << MUX3) | (0 << MUX2) | (0 << MUX1) | (1 << MUX0) | // ADC1 (PB2)
+		(1 << ADLAR); // put top 8 bits in 1 register for simpler reading (discard bottom 2 bits)
 
-	// reduce power consumption since we're not using the pin for digital input
-	DIDR0 = ((0 << ADC3D) | (0 << ADC2D) | (1 << ADC1D) | (0 << ADC0D));
+	ADCSRA = (1 << ADEN) | // enable
+		(1 << ADPS2) | (1 << ADPS1) | (0 << ADPS0);
+
+	sei ();
 
 	_delay_ms (50);
 	while (1)
 	{
-		// read ADC value
-		uint32_t adch = ADCH;
-		uint32_t __attribute__((unused)) adcl = ADCL; // read & discard; shouldn't be needed but do anyways to be safe
-		uint32_t adcval = adch;
+		ADCSRA |= (1 << ADSC); // start ADC measurement
+		while (ADCSRA & (1 << ADSC)) {}
+
+		uint8_t adcval = ADCH;
 
 		if (adcval < 128)
 		{
-			/* turn all on, one-by-one */
-			PORTB |= _BV(PB3);
-			PORTB |= _BV(PB4);
+			PORTB &= ~_BV(PB1);
+			PORTB &= ~_BV(PB3);
+			PORTB &= ~_BV(PB4);
 		}
 		else
 		{
-			/* turn all off, one-by-one */
-			PORTB &= ~_BV(PB3);
-			PORTB &= ~_BV(PB4);
+			PORTB |= _BV(PB1);
+			PORTB |= _BV(PB3);
+			PORTB |= _BV(PB4);
 		}
 	}
 }
