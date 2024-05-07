@@ -86,27 +86,45 @@ main (void)
 			_BV(PC7);
 
 	_delay_ms (50);
-	uint8_t scroll = 0;
+
+	PORTC |= _BV(PC5); // pulses are from positive to ground
+
 	while (1)
 	{
+		// 128 - 62.5 Hz
+		// 132 - 60.2 Hz
+		// 134 - 59.5 Hz
+		// 140 - 57.5 Hz
+		__builtin_avr_delay_cycles((uint32_t)1024 * (uint32_t)132);
+
+		// 100 - 12.45 us
+		// 95 - 11.8 us
+		// 97 - 12.10 us
+		PORTC |= _BV(PC3);
+		__builtin_avr_delay_cycles(97);
+		PORTC &= ~_BV(PC3);
+
+		// 6 us after lowering latch:
+		// send 16 down pulses on clock signal
+		__builtin_avr_delay_cycles(45);
+
 		uint8_t onoff[12];
 		int i;
-		for (i = 0; i < 12; i++)
+
+		for (i = 0; i < 16; i++)
 		{
-			// input = PINC & _BV(PINC4);
-			onoff[i] = i == scroll;
+			PORTC &= ~_BV(PC5);
+			// sample input on falling edge
+			if (i < 12)
+				onoff[i] = !(PINC & _BV(PINC4));
+			__builtin_avr_delay_cycles(45);
+
+			// controller shifts stat on rising edge
+			PORTC |= _BV(PC5);
+			__builtin_avr_delay_cycles(45);
 		}
 
 		for (i = 0; i < 12; i++)
 			_set (i, onoff[i]);
-
-		if (scroll == 0)
-			PORTC |= _BV(PC3);
-		else
-			PORTC &= ~_BV(PC3);
-
-		scroll = (scroll + 1) % 12;
-
-		// _delay_ms (75);
 	}
 }
