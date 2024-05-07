@@ -54,10 +54,7 @@ _set (uint8_t bit, uint8_t onoff)
 int
 main (void)
 {
-	uint8_t a = 0;
-	uint8_t b = 1;
-	uint8_t c = 2;
-
+	// set output pins
 	DDRD =	_BV(PD0) |
 		_BV(PD1) |
 		_BV(PD2) |
@@ -70,29 +67,46 @@ main (void)
 		_BV(PB7) |
 		_BV(PB1) |
 		_BV(PB0);
+	DDRC =	_BV(PC5) |
+		_BV(PC3);
+
+	// PC5 - data clock
+	// PC4 - data in
+	// PC3 - data latch
+
+	// enable pull-ups
+	PORTB |=	_BV(PB5) |
+			_BV(PB4) |
+			_BV(PB3) |
+			_BV(PB2);
+	PORTC |=	_BV(PC4) |
+			_BV(PC2) |
+			_BV(PC1) |
+			_BV(PC0) |
+			_BV(PC7);
 
 	_delay_ms (50);
+	uint8_t scroll = 0;
 	while (1)
 	{
 		uint8_t onoff[12];
 		int i;
 		for (i = 0; i < 12; i++)
 		{
-			if (i == a || i == b || i == c)
-				onoff[i] = 1;
-			else
-				onoff[i] = 0;
+			// input = PINC & _BV(PINC4);
+			onoff[i] = i == scroll;
 		}
+
 		for (i = 0; i < 12; i++)
-		{
-			if (onoff[i])
-				_set (i, 1);
-			else
-				_set (i, 0);
-		}
-		_delay_ms (75);
-		a = (a + 1) % 12;
-		b = (b + 1) % 12;
-		c = (c + 1) % 12;
+			_set (i, onoff[i]);
+
+		if (scroll == 0)
+			PORTC |= _BV(PC3);
+		else
+			PORTC &= ~_BV(PC3);
+
+		scroll = (scroll + 1) % 12;
+
+		// _delay_ms (75);
 	}
 }
