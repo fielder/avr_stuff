@@ -1,7 +1,3 @@
-#ifndef F_CPU
-#define F_CPU 8000000UL
-#endif
-
 #include <avr/io.h>
 #include <avr/cpufunc.h>
 #include <util/delay.h>
@@ -119,7 +115,7 @@ main (void)
 				onoff[i] = !(PINC & _BV(PINC4));
 			__builtin_avr_delay_cycles(45);
 
-			// controller shifts stat on rising edge
+			// controller shifts data out on rising edge
 			PORTC |= _BV(PC5);
 			__builtin_avr_delay_cycles(45);
 		}
