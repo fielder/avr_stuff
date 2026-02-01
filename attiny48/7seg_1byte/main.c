@@ -120,7 +120,6 @@ main (void)
 		uint8_t val = 0;
 
 		/* start off w/ low nibble selected */
-		uint8_t hi_selected = 0;
 		PORTC |= _BV(PC4);
 
 		for (uint8_t i = 0; i < 8; i++)
@@ -128,59 +127,21 @@ main (void)
 
 		while (1)
 		{
-#if 0
-			if (clk & 0x8) {
-				if (hi_selected) {
-					/* high nibble already selected */
-				} else {
-					/* move to high nibble byte selected */
-					//PORTC |= _BV(PC5);
-					//PORTC &= ~_BV(PC4);
-					hi_selected = 1;
-				}
-				//uint8_t nib = (val >> 4) & 0xf;
-				//uint8_t ledidx = clk & 0x7;
-				//SetOutputLED (ledidx, LED_MAP[nib][ledidx]);
-			} else {
-				if (!hi_selected) {
-					/* low nibble already selected */
-				} else {
-					/* move to low nibble byte selected */
-					PORTC &= ~_BV(PC5);
-					PORTC |= _BV(PC4);
-					hi_selected = 0;
-				}
-				uint8_t nib = (val >> 0) & 0xf;
-				uint8_t ledidx = clk & 0x7;
-				SetOutputLED (ledidx, LED_MAP[nib][ledidx]);
-			}
-#endif
+			PORTC &= ~_BV(PC5);
+			PORTC |= _BV(PC4); /* select low nibble */
+			for (uint8_t ledidx = 0; ledidx < 8; ledidx++)
+				SetOutputLED (ledidx, LED_MAP[(val >> 0) & 0xf][ledidx]);
+			_delay_ms (1); /* give a bit for the LEDs to show */
 
-#if 0
-			if ((clk & (16384*16)) == 0)
-			{
-				/* run tick */
-				val += 1;
-			}
-#endif
-
-#if 1
-PORTC &= ~_BV(PC5);
-PORTC |= _BV(PC4); /* select low nibble */
-for (uint8_t ledidx = 0; ledidx < 8; ledidx++)
-	SetOutputLED (ledidx, LED_MAP[(val >> 0) & 0xf][ledidx]);
-_delay_ms (100);
-PORTC |= _BV(PC5); /* select high nibble */
-PORTC &= ~_BV(PC4);
-for (uint8_t ledidx = 0; ledidx < 8; ledidx++)
-	SetOutputLED (ledidx, LED_MAP[(val >> 4) & 0xf][ledidx]);
-
-_delay_ms (100);
-
-val += 1;
-#endif
+			PORTC |= _BV(PC5); /* select high nibble */
+			PORTC &= ~_BV(PC4);
+			for (uint8_t ledidx = 0; ledidx < 8; ledidx++)
+				SetOutputLED (ledidx, LED_MAP[(val >> 4) & 0xf][ledidx]);
+			_delay_ms (1); /* give a bit for the LEDs to show */
 
 			clk += 1;
+			if ((clk & 0xff) == 0x0)
+				val += 1;
 		}
 	}
 	else
