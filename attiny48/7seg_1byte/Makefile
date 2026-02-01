@@ -22,4 +22,4 @@ $(TARGET).elf: $(TARGET).o
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 program: $(TARGET).hex
-	avrdude -c stk500v2 -P "$(PROGPORT)" -p $(MCU) -U flash:w:$(TARGET).hex:i $(FUSEOPTS)
+	avrdude -C /etc/avrdude.conf -c stk500v2 -P "$(PROGPORT)" -p $(MCU) -U flash:w:$(TARGET).hex:i $(FUSEOPTS)
